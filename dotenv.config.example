@@ -1,3 +1,5 @@
-PORT=
+NODE_ENV=
+DB_STRING=mongodb://localhost:27017/weeklist
 
-DB_STRING=
+JWT_SECRET_KEY=
+JWT_EXPIRATION=

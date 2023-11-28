@@ -1,31 +1,55 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const validator = require('validator');
 
 const userSchema = mongoose.Schema({
   fullname: {
     type: String,
-    reqired: true
+    required: [true, 'Fullname is required']
   },
   email: {
     type: String,
-    reqired: true
+    required: true,
+    unique: true,
+    validate: [validator.isEmail, 'Email is not valid']
   },
   password: {
     type: String,
-    required: true
+    required: [true, 'Password is required'],
+    select: false
   },
   age: {
-    type: String,
-    reqired: true
+    type: Number,
+    required: [true, 'Age is required']
   },
   gender: {
     type: String,
-    reqired: true
+    enum: {
+      values: ['male', 'female'],
+      message: 'Gender must be male or female'
+    },
+    required: [true, 'Gender is required']
   },
   mobile: {
-    type: Number,
-    reqired: true
+    type: String,
+    required: [true, 'Mobile is required'],
+    validate: {
+      validator: function(value) {
+        return validator.isMobilePhone(value, 'en-IN');
+      },
+      message: 'Mobile phone is not valid'
+    }
   }
 });
+
+userSchema.pre('save', async function(next) {
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
 
 const User = mongoose.model('User', userSchema);
 
