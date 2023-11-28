@@ -1,6 +1,7 @@
 const express = require('express');
 const morgan = require('morgan');
 const userRouter = require('./routes/userRoute');
+const healthRouter = require('./routes/healthRoute');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 
@@ -16,6 +17,7 @@ app.use((req, res, next) => {
 app.use(morgan('dev'));
 
 app.use('/api/v1/user', userRouter);
+app.use('/api/v1/health', healthRouter);
 
 app.all('*', (req, res, next) => {
   console.log(req.url);
