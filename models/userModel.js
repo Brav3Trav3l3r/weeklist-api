@@ -37,7 +37,7 @@ const userSchema = mongoose.Schema({
       validator: function(value) {
         return validator.isMobilePhone(value, 'en-IN');
       },
-      message: 'Mobile phone is not valid'
+      message: 'Mobile is not valid'
     }
   }
 });

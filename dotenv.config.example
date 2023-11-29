@@ -1,4 +1,4 @@
-NODE_ENV=
+NODE_ENV=development
 DB_STRING=mongodb://localhost:27017/weeklist
 
 JWT_SECRET_KEY=

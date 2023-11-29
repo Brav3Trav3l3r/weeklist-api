@@ -20,8 +20,7 @@ app.use('/api/v1/user', userRouter);
 app.use('/api/v1/health', healthRouter);
 
 app.all('*', (req, res, next) => {
-  console.log(req.url);
-  next(new AppError(`Route ${req.url} not found`, 404));
+  next(new AppError(`Route ${req.originalUrl} not found`, 404));
 });
 
 app.use(globalErrorHandler);
