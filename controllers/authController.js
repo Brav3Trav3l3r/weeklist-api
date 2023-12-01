@@ -19,7 +19,6 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   const token = req.headers.authorization.split(' ')[1];
-
   const decoded = await promisify(jwt.verify)(
     token,
     process.env.JWT_SECRET_KEY
@@ -27,7 +26,6 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // Check if user have not deleted account after jwt was issued
   const currentUser = await User.findById(decoded.id);
-  console.log(currentUser);
 
   if (!currentUser) {
     return next(
@@ -57,7 +55,7 @@ exports.login = catchAsync(async (req, res, next) => {
   }
 
   // create token and send it
-  const token = getToken(user._id);
+  const token = getToken(user.id);
 
   res.status(200).json({
     status: 'success',
@@ -74,7 +72,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     mobile: req.body.mobile,
     gender: req.body.gender
   });
-  const token = getToken(user._id);
+  const token = getToken(user.id);
 
   res.status(200).json({
     status: 'success',

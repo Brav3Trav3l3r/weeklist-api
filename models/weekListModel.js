@@ -27,8 +27,7 @@ const weekListScheme = new mongoose.Schema(
       default: Date.now()
     },
     tasks: [taskSchema],
-    number: Number,
-    timeLeft: Date
+    number: Number
   },
   {
     toJSON: { virtuals: true },
@@ -49,6 +48,22 @@ weekListScheme.virtual('state').get(function() {
   if (this.isCompleted) return 'completed';
 
   return 'active';
+});
+
+weekListScheme.virtual('timeLeft').get(function() {
+  // if under 7 daays
+  const timeDifference = Date.now() - this.createdAt.getTime();
+
+  // Convert milliseconds to days
+  const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+
+  if (!this.isCompleted && daysDifference >= 7) {
+    return null;
+  }
+
+  const timeLeft = Math.floor(60 * 60 * 24 * 7 - timeDifference / 1000);
+
+  return timeLeft;
 });
 
 weekListScheme.pre(/^find/, function(next) {
