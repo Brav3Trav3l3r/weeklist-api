@@ -15,7 +15,7 @@ const app = require('./app');
 console.log(`Environment: ${process.env.NODE_ENV}`);
 
 mongoose
-  .connect(process.env.DB_CLOUD_STRING)
+  .connect(process.env.DB_STRING)
   .then(() => console.log('✅ Connected to database successfully.'));
 
 const PORT = process.env.PORT || 8000;

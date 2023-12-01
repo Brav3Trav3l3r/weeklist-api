@@ -1,7 +1,6 @@
 const AppError = require('../utils/appError');
 
 const sendProdError = (res, err) => {
-  console.log(err);
   if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,
@@ -39,6 +38,9 @@ module.exports = (err, req, res, next) => {
     }
     if (error.name === 'ValidationError') {
       error = new AppError(error.message, 402);
+    }
+    if (error.name === 'CastError') {
+      error = new AppError('Invalid ID', 400);
     }
     sendProdError(res, error);
   } else if (process.env.NODE_ENV === 'development') {

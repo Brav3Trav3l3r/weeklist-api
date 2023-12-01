@@ -39,7 +39,8 @@ const userSchema = mongoose.Schema({
       },
       message: 'Mobile is not valid'
     }
-  }
+  },
+  passwordChangedAt: Date
 });
 
 userSchema.pre('save', async function(next) {

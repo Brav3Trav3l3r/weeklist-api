@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
 const User = require('../models/userModel');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
@@ -10,6 +11,35 @@ const getToken = id => {
 
   return token;
 };
+
+exports.protect = catchAsync(async (req, res, next) => {
+  // Check if header have jwt token and validate it
+  if (!req.headers.authorization) {
+    return next(new AppError('You must login to accesss this route.'));
+  }
+
+  const token = req.headers.authorization.split(' ')[1];
+
+  const decoded = await promisify(jwt.verify)(
+    token,
+    process.env.JWT_SECRET_KEY
+  );
+
+  // Check if user have not deleted account after jwt was issued
+  const currentUser = await User.findById(decoded.id);
+  console.log(currentUser);
+
+  if (!currentUser) {
+    return next(
+      new AppError('User belongs to this token no longer exist', 400)
+    );
+  }
+  req.user = currentUser;
+
+  // Check if user have changed password after token is created
+
+  next();
+});
 
 exports.login = catchAsync(async (req, res, next) => {
   // check if email and password exist in body
@@ -44,7 +74,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     mobile: req.body.mobile,
     gender: req.body.gender
   });
-  const token = getToken({ id: user._id });
+  const token = getToken(user._id);
 
   res.status(200).json({
     status: 'success',
