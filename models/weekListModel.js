@@ -37,20 +37,16 @@ const weekListScheme = new mongoose.Schema(
 );
 
 weekListScheme.virtual('state').get(function() {
-  // Calculate the time difference in milliseconds
   const timeDifference = Date.now() - this.createdAt.getTime();
 
   // Convert milliseconds to days
   const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
-  // Set the state based on the time difference
   if (!this.isCompleted && daysDifference >= 7) {
     return 'expired';
   }
 
-  if (this.isCompleted) {
-    return 'completed';
-  }
+  if (this.isCompleted) return 'completed';
 
   return 'active';
 });
@@ -62,7 +58,6 @@ weekListScheme.pre(/^find/, function(next) {
 
 weekListScheme.methods.canModify = weekList => {
   const timeDifference = Date.now() - weekList.createdAt.getTime();
-
   const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
   if (daysDifference >= 1) return false;

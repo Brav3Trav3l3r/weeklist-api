@@ -61,8 +61,7 @@ exports.createWeekList = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.deleteWeekList = catchAsync(async (req, res, next) => {
-  // Check if the week list present and belongs to user
+const validateWeekList = async (req, next) => {
   const weekList = await WeekList.findById(req.params.id);
 
   if (!weekList || weekList.createdBy !== req.user.id) {
@@ -74,14 +73,20 @@ exports.deleteWeekList = catchAsync(async (req, res, next) => {
     );
   }
 
-  // if 24hr passed after week list creation. return
+  // if 24hr passed after week list creation. Return
   if (!weekList.canModify(weekList)) {
     return next(
       new AppError('You cannot delete or update this list anymore', 401)
     );
   }
 
-  // Delete
+  return weekList;
+};
+
+exports.deleteWeekList = catchAsync(async (req, res, next) => {
+  // Check if the week list present and belongs to user
+  const weekList = await validateWeekList(req, next);
+
   await WeekList.findByIdAndDelete(weekList._id);
 
   res.status(204).json({
@@ -90,9 +95,33 @@ exports.deleteWeekList = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.updateWeekList = async (req, res, next) => {
+const filterFields = (obj, ...args) => {
+  const filterObj = {};
+
+  Object.keys(obj).forEach(key => {
+    if (args.includes(key)) filterObj[key] = obj[key];
+  });
+
+  return filterObj;
+};
+
+exports.updateWeekList = catchAsync(async (req, res, next) => {
+  const weekList = await validateWeekList(req, next);
+  const allowedFieldObj = filterFields(
+    req.body,
+    'description',
+    'tasks',
+    'isCompleted'
+  );
+
+  weekList.description = allowedFieldObj.description;
+  weekList.tasks = allowedFieldObj.tasks;
+  weekList.isCompleted = allowedFieldObj.isCompleted;
+
+  await weekList.save();
+
   res.status(200).json({
     status: 'success',
-    message: 'OK'
+    data: { weekList }
   });
-};
+});
