@@ -4,7 +4,7 @@ const authController = require('../controllers/authController');
 
 const router = express.Router();
 
-router.get('/', authController.protect, weekListController.getWeekLists);
+router.get('/', weekListController.getWeekLists);
 
 router.post(
   '/create',

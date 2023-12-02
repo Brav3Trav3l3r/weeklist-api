@@ -71,11 +71,11 @@ weekListScheme.pre(/^find/, function(next) {
   next();
 });
 
-weekListScheme.methods.canModify = weekList => {
+weekListScheme.methods.canModify = (weekList, period) => {
   const timeDifference = Date.now() - weekList.createdAt.getTime();
   const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
-  if (daysDifference >= 1) return false;
+  if (daysDifference >= period) return false;
 
   return true;
 };

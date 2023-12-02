@@ -14,13 +14,6 @@ const validateWeekList = async (req, next) => {
     );
   }
 
-  // if 24hr passed after week list creation. Return
-  if (!weekList.canModify(weekList)) {
-    return next(
-      new AppError('You cannot delete or update this list anymore', 401)
-    );
-  }
-
   return weekList;
 };
 
@@ -93,8 +86,13 @@ exports.createWeekList = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteWeekList = catchAsync(async (req, res, next) => {
-  // Check if the week list exists and belongs to the user
+  // Check if the week list exists and belongs to the user.
   const weekList = await validateWeekList(req, next);
+
+  // if 24hr passed after week list creation. Return
+  if (!weekList.canModify(weekList, 1)) {
+    return next(new AppError('You cannot delete this list anymore', 403));
+  }
 
   await WeekList.findByIdAndDelete(weekList.id);
 
@@ -108,10 +106,30 @@ exports.updateWeekList = catchAsync(async (req, res, next) => {
   let weekList = await validateWeekList(req, next);
   const allowedFieldObj = filterFields(
     req.body,
+    'isCompleted',
     'description',
-    'tasks',
-    'isCompleted'
+    'tasks'
   );
+
+  // if 7dsy passed after week list creation. Return
+  if (!weekList.canModify(weekList, 7)) {
+    return next(new AppError('You cannot update this week list anymore', 403));
+  }
+
+  // If 1 day pass and fileds containes description or task. Return
+  if (
+    !weekList.canModify(weekList, 1) &&
+    Object.keys(allowedFieldObj).some(el =>
+      ['description', 'tasks'].includes(el)
+    )
+  ) {
+    return next(
+      new AppError(
+        'You can now only update "isCompleted" field after 24hr of creation.',
+        403
+      )
+    );
+  }
 
   weekList = await WeekList.findByIdAndUpdate(weekList.id, allowedFieldObj, {
     runValidators: false,
