@@ -12,6 +12,12 @@ router.post(
   weekListController.createWeekList
 );
 
+router.patch(
+  '/updateTasks/:id',
+  authController.protect,
+  weekListController.updateTask
+);
+
 router
   .route('/:id')
   .delete(authController.protect, weekListController.deleteWeekList)

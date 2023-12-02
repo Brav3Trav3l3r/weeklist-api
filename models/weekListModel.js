@@ -8,7 +8,8 @@ const taskSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'A task need a description']
-  }
+  },
+  completedAt: Date
 });
 
 const weekListScheme = new mongoose.Schema(
