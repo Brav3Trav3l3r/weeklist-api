@@ -28,7 +28,36 @@ const filterFields = (obj, ...args) => {
 };
 
 exports.getWeekLists = async (req, res, next) => {
-  const weekLists = await WeekList.find();
+  const weekLists = await WeekList.find({ isCompleted: { $eq: false } });
+
+  res.status(200).json({
+    status: 'success',
+    requestedAt: res.requestedAt,
+    results: weekLists.length,
+    data: {
+      weekLists
+    }
+  });
+};
+
+exports.getActiveWeekList = async (req, res, next) => {
+  const weekLists = await WeekList.aggregate([
+    {
+      $match: {
+        $and: [
+          { isCompleted: false },
+          {
+            $expr: {
+              $lte: [
+                { $subtract: [new Date(), '$createdAt'] },
+                7 * 24 * 60 * 60 * 1000
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]);
 
   res.status(200).json({
     status: 'success',
@@ -104,31 +133,11 @@ exports.deleteWeekList = catchAsync(async (req, res, next) => {
 
 exports.updateWeekList = catchAsync(async (req, res, next) => {
   let weekList = await validateWeekList(req, next);
-  const allowedFieldObj = filterFields(
-    req.body,
-    'isCompleted',
-    'description',
-    'tasks'
-  );
+  const allowedFieldObj = filterFields(req.body, 'description', 'tasks');
 
-  // if 7days passed after week list creation. Return
-  if (!weekList.canModify(weekList, 7)) {
-    return next(new AppError('You cannot update this week list anymore', 403));
-  }
-
-  // If 1 day pass and fileds containes description or task. Return
-  if (
-    !weekList.canModify(weekList, 1) &&
-    Object.keys(allowedFieldObj).some(el =>
-      ['description', 'tasks'].includes(el)
-    )
-  ) {
-    return next(
-      new AppError(
-        'You can now only update "isCompleted" field after 24hr of creation.',
-        403
-      )
-    );
+  // if 1 day passed after week list creation. Return
+  if (!weekList.canModify(weekList, 1)) {
+    return next(new AppError('You can no longer update this task.', 403));
   }
 
   weekList = await WeekList.findByIdAndUpdate(weekList.id, allowedFieldObj, {
@@ -142,84 +151,59 @@ exports.updateWeekList = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.updateTask = catchAsync(async (req, res, next) => {
-  if (!req.body.id) {
+exports.markTask = catchAsync(async (req, res, next) => {
+  if (!req.body.taskId || !Object.hasOwn(req.body, 'isCompleted')) {
     return next(
       new AppError(
-        'Please provide then "id" of the task which you want to update.',
+        'Please provide the "id" and "isCompleted" property of the task which you want to update.',
         403
       )
     );
   }
 
-  let weekList = await validateWeekList(req, next);
+  const weekList = await validateWeekList(req, next);
 
-  // if 7days passed after week list creation. Return
+  if (weekList.isCompleted) {
+    return next(
+      new AppError(
+        'This weekilst is marked complete. You can no longer update it.',
+        403
+      )
+    );
+  }
+
+  // Check if task is in the weeklist
+  const currentTask = await weekList.tasks.id(req.body.taskId);
+
+  if (!currentTask) {
+    return next(
+      new AppError('The task with the given "id" is not in the weeklist', 400)
+    );
+  }
+
+  // if 7days have passed after week list creation. Return
   if (!weekList.canModify(weekList, 7)) {
-    return next(new AppError('You cannot update this task anymore', 403));
-  }
-
-  const allowedFieldObj = filterFields(req.body, 'isCompleted', 'description');
-
-  // If 1 day pass and fileds contains description. Return
-  if (
-    !weekList.canModify(weekList, 1) &&
-    Object.keys(allowedFieldObj).some(el => ['description'].includes(el))
-  ) {
-    return next(
-      new AppError(
-        'You can now only update "isCompleted" field after 24hr of creation.',
-        403
-      )
-    );
+    return next(new AppError('You can no longer update this task.', 403));
   }
 
   // Update the task.
-  // #TODO make this code short.
+  currentTask.isCompleted = req.body.isCompleted;
+
   if (req.body.isCompleted) {
-    weekList = await WeekList.findOneAndUpdate(
-      { _id: weekList.id, 'tasks._id': req.body.id },
-      {
-        $set: {
-          'tasks.$.isCompleted': req.body.isCompleted,
-          'tasks.$.completedAt': new Date(),
-          'tasks.$.description': req.body.description
-        }
-      },
-
-      { new: true }
-    );
-  } else if (req.body.isCompleted === false) {
-    weekList = await WeekList.findOneAndUpdate(
-      { _id: weekList.id, 'tasks._id': req.body.id },
-      {
-        $set: {
-          'tasks.$.isCompleted': req.body.isCompleted,
-          'tasks.$.description': req.body.description
-        },
-        $unset: {
-          'tasks.$.completedAt': ''
-        }
-      },
-
-      { new: true }
-    );
+    currentTask.completedAt = new Date();
   } else {
-    weekList = await WeekList.findOneAndUpdate(
-      { _id: weekList.id, 'tasks._id': req.body.id },
-      {
-        $set: {
-          'tasks.$.isCompleted': req.body.isCompleted,
-          'tasks.$.description': req.body.description
-        }
-      },
-
-      { new: true }
-    );
+    currentTask.completedAt = undefined;
   }
+
+  // Check if all tasks are complete, if then update the isCompleted property of weeeklist
+  if (!weekList.tasks.some(task => task.isCompleted === false)) {
+    weekList.isCompleted = true;
+  }
+
+  weekList.save();
 
   res.status(200).json({
     status: 'success',
-    data: { weekList }
+    data: { currentTask }
   });
 });

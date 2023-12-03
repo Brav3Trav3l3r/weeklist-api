@@ -4,7 +4,7 @@ const authController = require('../controllers/authController');
 
 const router = express.Router();
 
-router.get('/', weekListController.getWeekLists);
+router.get('/', authController.protect, weekListController.getWeekLists);
 
 router.post(
   '/create',
@@ -13,9 +13,9 @@ router.post(
 );
 
 router.patch(
-  '/updateTasks/:id',
+  '/markTask/:id',
   authController.protect,
-  weekListController.updateTask
+  weekListController.markTask
 );
 
 router

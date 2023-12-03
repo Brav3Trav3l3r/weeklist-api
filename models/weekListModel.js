@@ -37,22 +37,24 @@ const weekListScheme = new mongoose.Schema(
 );
 
 weekListScheme.virtual('state').get(function() {
+  const status = [];
   const timeDifference = Date.now() - this.createdAt.getTime();
 
   // Convert milliseconds to days
   const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
-  if (!this.isCompleted && daysDifference >= 7) {
-    return 'expired';
+  if (daysDifference >= 7) {
+    status.push('inactive');
+  } else {
+    status.push('active');
   }
 
-  if (this.isCompleted) return 'completed';
+  if (this.isCompleted) status.push('completed');
 
-  return 'active';
+  return status;
 });
 
 weekListScheme.virtual('timeLeft').get(function() {
-  // if under 7 daays
   const timeDifference = Date.now() - this.createdAt.getTime();
 
   // Convert milliseconds to days
@@ -65,11 +67,6 @@ weekListScheme.virtual('timeLeft').get(function() {
   const timeLeft = Math.floor(60 * 60 * 24 * 7 - timeDifference / 1000);
 
   return timeLeft;
-});
-
-weekListScheme.pre(/^find/, function(next) {
-  this.totalActive = 2;
-  next();
 });
 
 weekListScheme.methods.canModify = (weekList, period) => {
