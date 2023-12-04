@@ -28,13 +28,22 @@ const weekListScheme = new mongoose.Schema(
       default: Date.now()
     },
     tasks: [taskSchema],
-    number: Number
+    number: Number,
+    expiresOn: { type: Date, select: false }
   },
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }
 );
+
+weekListScheme.pre('save', function(next) {
+  if (this.isNew) {
+    this.expiresOn = Date.now() + 1000 * 60 * 60 * 24 * 7;
+  }
+
+  next();
+});
 
 weekListScheme.virtual('state').get(function() {
   const status = [];

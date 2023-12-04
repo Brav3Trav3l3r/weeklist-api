@@ -28,36 +28,16 @@ const filterFields = (obj, ...args) => {
 };
 
 exports.getWeekLists = async (req, res, next) => {
-  const weekLists = await WeekList.find({ isCompleted: { $eq: false } });
-
-  res.status(200).json({
-    status: 'success',
-    requestedAt: res.requestedAt,
-    results: weekLists.length,
-    data: {
-      weekLists
-    }
-  });
-};
-
-exports.getActiveWeekList = async (req, res, next) => {
-  const weekLists = await WeekList.aggregate([
-    {
-      $match: {
-        $and: [
-          { isCompleted: false },
-          {
-            $expr: {
-              $lte: [
-                { $subtract: [new Date(), '$createdAt'] },
-                7 * 24 * 60 * 60 * 1000
-              ]
-            }
-          }
-        ]
+  const weekLists = await WeekList.find({
+    $and: [
+      { isCompleted: { $eq: false } },
+      {
+        expiresOn: {
+          $gt: new Date()
+        }
       }
-    }
-  ]);
+    ]
+  });
 
   res.status(200).json({
     status: 'success',
@@ -71,26 +51,19 @@ exports.getActiveWeekList = async (req, res, next) => {
 
 exports.createWeekList = catchAsync(async (req, res, next) => {
   // If two active weeklist present. Throw error.
-  const weekLists = await WeekList.aggregate([
-    {
-      $match: {
-        $and: [
-          { createdBy: req.user.id },
-          { isCompleted: false },
-          {
-            $expr: {
-              $lte: [
-                { $subtract: [new Date(), '$createdAt'] },
-                7 * 24 * 60 * 60 * 1000
-              ]
-            }
-          }
-        ]
+  const weekLists = await WeekList.find({
+    $and: [
+      { createdBy: req.user.id },
+      { isCompleted: { $eq: false } },
+      {
+        expiresOn: {
+          $gt: new Date()
+        }
       }
-    }
-  ]);
+    ]
+  });
 
-  if (weekLists.length >= 2) {
+  if (weekLists.length === 2) {
     return next(
       new AppError(
         'You have reached your limit( 2 active weeklists ). Please upgrade your plan to create unlimited lists.',
