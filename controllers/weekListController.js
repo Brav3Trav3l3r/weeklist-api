@@ -27,6 +27,19 @@ const filterProperties = (obj, ...args) => {
   return filterObj;
 };
 
+exports.getAllWeekLists = async (req, res, next) => {
+  const weekLists = await WeekList.find();
+
+  res.status(200).json({
+    status: 'success',
+    requestedAt: res.requestedAt,
+    results: weekLists.length,
+    data: {
+      weekLists
+    }
+  });
+};
+
 exports.getWeekLists = async (req, res, next) => {
   const weekLists = await WeekList.find({
     $and: [
@@ -51,7 +64,7 @@ exports.getWeekLists = async (req, res, next) => {
 
 exports.createWeekList = catchAsync(async (req, res, next) => {
   // If two active weeklist present. Throw error.
-  const weekLists = await WeekList.find({
+  const weekLists = await WeekList.countDocuments({
     $and: [
       { createdBy: req.user.id },
       { isCompleted: { $eq: false } },
@@ -63,7 +76,7 @@ exports.createWeekList = catchAsync(async (req, res, next) => {
     ]
   });
 
-  if (weekLists.length === 2) {
+  if (weekLists >= 2) {
     return next(
       new AppError(
         'You have reached your limit( 2 active weeklists ). Please upgrade your plan to create unlimited lists.',

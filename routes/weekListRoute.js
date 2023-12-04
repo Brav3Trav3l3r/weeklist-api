@@ -6,6 +6,12 @@ const router = express.Router();
 
 router.get('/', authController.protect, weekListController.getWeekLists);
 
+router.get(
+  '/getAll',
+  authController.protect,
+  weekListController.getAllWeekLists
+);
+
 router.post(
   '/create',
   authController.protect,
