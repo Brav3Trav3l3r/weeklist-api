@@ -72,11 +72,25 @@ exports.createWeekList = catchAsync(async (req, res, next) => {
     );
   }
 
+  // Filter out propertes.
+  const allowedPropertiesObj = filterProperties(
+    req.body,
+    'description',
+    'tasks'
+  );
+
+  // Limit to only update description of task.
+  if (allowedPropertiesObj.tasks) {
+    const filterdTasks = allowedPropertiesObj.tasks.map(task =>
+      filterProperties(task, 'description')
+    );
+    allowedPropertiesObj.tasks = filterdTasks;
+  }
+
   // Create weeklist
   const weekList = await WeekList.create({
-    description: req.body.description,
-    tasks: req.body.tasks,
-    createdBy: req.user.id
+    createdBy: req.user.id,
+    ...allowedPropertiesObj
   });
 
   res.status(200).json({
@@ -117,9 +131,9 @@ exports.updateWeekList = catchAsync(async (req, res, next) => {
     return next(new AppError('You can no longer update this task.', 403));
   }
 
-  // Limit task properties to only description.
-  if (req.body && req.body.tasks) {
-    const filterdTasks = req.body.tasks.map(task =>
+  // Limit to only update description of task.
+  if (allowedPropertiesObj.tasks) {
+    const filterdTasks = allowedPropertiesObj.tasks.map(task =>
       filterProperties(task, 'description')
     );
     allowedPropertiesObj.tasks = filterdTasks;
@@ -185,7 +199,7 @@ exports.markTask = catchAsync(async (req, res, next) => {
     currentTask.completedAt = undefined;
   }
 
-  // Check if all tasks are complete, if then update the isCompleted property of weeeklist
+  // Check if all tasks are complete, if then update the isCompleted property to true of weeeklist
   if (!weekList.tasks.some(task => task.isCompleted === false)) {
     weekList.isCompleted = true;
   }
