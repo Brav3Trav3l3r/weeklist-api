@@ -12,7 +12,7 @@ const taskSchema = new mongoose.Schema({
   completedAt: Date
 });
 
-const weekListScheme = new mongoose.Schema(
+const weekListSchema = new mongoose.Schema(
   {
     createdBy: String,
     description: {
@@ -37,7 +37,13 @@ const weekListScheme = new mongoose.Schema(
   }
 );
 
-weekListScheme.pre('save', function(next) {
+weekListSchema.pre(/^find/, function(next) {
+  this.select('-__v');
+
+  next();
+});
+
+weekListSchema.pre('save', function(next) {
   if (this.isNew) {
     this.expiresOn = Date.now() + 1000 * 60 * 60 * 24 * 7;
   }
@@ -45,7 +51,7 @@ weekListScheme.pre('save', function(next) {
   next();
 });
 
-weekListScheme.virtual('state').get(function() {
+weekListSchema.virtual('state').get(function() {
   const status = [];
   const timeDifference = Date.now() - this.createdAt.getTime();
 
@@ -63,7 +69,7 @@ weekListScheme.virtual('state').get(function() {
   return status;
 });
 
-weekListScheme.virtual('timeLeft').get(function() {
+weekListSchema.virtual('timeLeft').get(function() {
   const timeDifference = Date.now() - this.createdAt.getTime();
 
   // Convert milliseconds to days
@@ -78,7 +84,7 @@ weekListScheme.virtual('timeLeft').get(function() {
   return timeLeft;
 });
 
-weekListScheme.methods.canModify = (weekList, period) => {
+weekListSchema.methods.canModify = (weekList, period) => {
   const timeDifference = Date.now() - weekList.createdAt.getTime();
   const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
@@ -87,6 +93,6 @@ weekListScheme.methods.canModify = (weekList, period) => {
   return true;
 };
 
-const WeekList = mongoose.model('WeekList', weekListScheme);
+const WeekList = mongoose.model('WeekList', weekListSchema);
 
 module.exports = WeekList;
