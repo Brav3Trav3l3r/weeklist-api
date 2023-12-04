@@ -17,7 +17,7 @@ const validateWeekList = async (req, next) => {
   return weekList;
 };
 
-const filterFields = (obj, ...args) => {
+const filterProperties = (obj, ...args) => {
   const filterObj = {};
 
   Object.keys(obj).forEach(key => {
@@ -106,17 +106,34 @@ exports.deleteWeekList = catchAsync(async (req, res, next) => {
 
 exports.updateWeekList = catchAsync(async (req, res, next) => {
   let weekList = await validateWeekList(req, next);
-  const allowedFieldObj = filterFields(req.body, 'description', 'tasks');
+  const allowedPropertiesObj = filterProperties(
+    req.body,
+    'description',
+    'tasks'
+  );
 
   // if 1 day passed after week list creation. Return
   if (!weekList.canModify(weekList, 1)) {
     return next(new AppError('You can no longer update this task.', 403));
   }
 
-  weekList = await WeekList.findByIdAndUpdate(weekList.id, allowedFieldObj, {
-    runValidators: false,
-    new: true
-  });
+  // Limit task properties to only description.
+  if (req.body && req.body.tasks) {
+    const filterdTasks = req.body.tasks.map(task =>
+      filterProperties(task, 'description')
+    );
+    allowedPropertiesObj.tasks = filterdTasks;
+  }
+
+  // Update weeklist
+  weekList = await WeekList.findByIdAndUpdate(
+    weekList.id,
+    allowedPropertiesObj,
+    {
+      runValidators: false,
+      new: true
+    }
+  );
 
   res.status(200).json({
     status: 'success',
