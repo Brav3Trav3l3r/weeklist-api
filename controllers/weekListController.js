@@ -1,3 +1,4 @@
+const Counter = require('../models/counterModel');
 const WeekList = require('../models/weekListModel');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
@@ -25,6 +26,16 @@ const filterProperties = (obj, ...args) => {
   });
 
   return filterObj;
+};
+
+const getNextSequence = async id => {
+  const doc = await Counter.findOneAndUpdate(
+    { _id: id },
+    { $inc: { seq: 1 } },
+    { new: true }
+  );
+
+  return doc.seq;
 };
 
 exports.getAllWeekLists = async (req, res, next) => {
@@ -100,9 +111,19 @@ exports.createWeekList = catchAsync(async (req, res, next) => {
     allowedPropertiesObj.tasks = filterdTasks;
   }
 
+  // Check if counter collection have initial doc
+  const counter = await Counter.countDocuments();
+
+  if (!counter) {
+    await Counter.create({ _id: 'doc-sequence', seq: 0 });
+  }
+
   // Create weeklist
+  const seq = await getNextSequence('doc-sequence');
+
   const weekList = await WeekList.create({
     createdBy: req.user.id,
+    number: seq,
     ...allowedPropertiesObj
   });
 
